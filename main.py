@@ -1,3 +1,4 @@
+import sys
 from typing import Any
 
 import pytermgui as ptg
@@ -9,8 +10,14 @@ OUTPUT = {}
 
 class EditorWidget(Widget):
 
+
+
     def handle_key(self, key: str) -> bool:
-        print(f"Received key: {key}")
+        ret_value = super().handle_key(key)
+        print(f"Received key: {key}", file=sys.stderr)
+        return ret_value
+
+    # def handle_key(self, key: str) -> bool:
 
     def __init__(self, **attrs: Any):
         super().__init__(**attrs)
@@ -46,6 +53,7 @@ class EditorWidget(Widget):
         for widget in window:
             if isinstance(widget, ptg.InputField):
                 OUTPUT[widget.prompt] = widget.value
+                print(f"Processing InputField {widget.prompt}", file=sys.stderr)
                 continue
 
             if isinstance(widget, ptg.Container):
