@@ -8,6 +8,7 @@ Game {
 
 GameGrid {
     layout: grid;
+    grid-size: 5 5;
     layer: gameplay;
 }
 
