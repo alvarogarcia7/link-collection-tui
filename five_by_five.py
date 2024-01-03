@@ -157,6 +157,8 @@ class Game(Screen):
     SIZE: Final = 5
     """The size of the game grid. Clue's in the name really."""
 
+    _filled_cells: list[list[bool]] = [[False for j in range(5)] for i in range(5)]
+
     BINDINGS = [
         Binding("n", "new_game", "New Game"),
         Binding("question_mark", "push_screen('help')", "Help", key_display="?"),
@@ -202,7 +204,7 @@ class Game(Screen):
         Returns:
             GameCell: The cell at that location.
         """
-        return self.query_one(f"#{GameCell.at(row,col)}", GameCell)
+        return self.query_one(f"#{GameCell.at(row, col)}", GameCell)
 
     def compose(self) -> ComposeResult:
         """Compose the game screen.
@@ -227,7 +229,12 @@ class Game(Screen):
             col (int): The column of the cell to toggle.
         """
         if 0 <= row <= (self.SIZE - 1) and 0 <= col <= (self.SIZE - 1):
-            self.cell(row, col).toggle_class("filled")
+            self._filled_cells[row][col] = not self._filled_cells[row][col]
+            if self._filled_cells[row][col]:
+                self.cell(row, col).add_class("filled")
+            else:
+                self.cell(row, col).remove_class("filled")
+            self.cell(row, col).notify_style_update()
 
     _PATTERN: Final = (-1, 1, 0, 0, 0)
 
