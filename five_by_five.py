@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import abc
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from rich.console import ConsoleRenderable
-from rich.table import Table
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.css.query import DOMQuery
 from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widget import Widget
-from textual.widgets import Button, Footer, Label, Markdown, Static
+from textual.widget import Widget, AwaitMount
+from textual.widgets import Button, Footer, Label, Markdown, Static, DataTable
 
 if TYPE_CHECKING:
     from typing_extensions import Final
@@ -32,8 +32,17 @@ class Repository:
 
 
 class InMemoryRepository(Repository):
+    def __init__(self):
+        self._values = [
+            Register("Hacker News", "https://news.ycombinator.com/news"),
+            Register("Hacker News", "https://news.ycombinator.com/news")
+        ]
+
     def find_all(self) -> list[Register]:
-        return [Register("Hacker News", "https://news.ycombinator.com/news")]
+        return self._values
+
+    def append(self, register: Register) -> None:
+        self._values.append(register)
 
 
 # class Help(Screen):
@@ -140,31 +149,34 @@ class GameGrid(Widget):
     def __init__(self, repository: Repository, *children: Widget):
         super().__init__(*children)
         self._repository = repository
+        table = DataTable()
+        table.add_column("Link", width=10)
+        table.add_column("Name", width=40)
+        table.zebra_stripes = True
+        self._table = table
 
     def compose(self) -> ComposeResult:
-        """Compose the game grid.
-
-        Returns:
-            ComposeResult: The result of composing the game grid.
-        """
-        table = Table()
-        table.add_column("Link", min_width=10)
-        table.add_column("Name", min_width=40, overflow="ignore")
-        for index, row in enumerate(self._repository.find_all()):
-            # table.add_row(GameCell(index, row))
-            table.add_row(row.link, row.title)
-        yield Static(table)
+        self._rows = self._repository.find_all()
+        for index, row in enumerate(self._rows):
+            self._table.add_row(*[row.link, row.title], key=f"cell-{index}")
+        # self._table.update_cell("cell-0", "Link", "NEW VALUE")
+        yield self._table
 
 
 class Game(Screen):
     BINDINGS = [
+        Binding("a", "add", "Add"),
         # Binding("n", "new_game", "New Game"),
         # Binding("question_mark", "push_screen('help')", "Help", key_display="?"),
         Binding("q", "quit", "Quit"),
-        Binding("up,w,k", "navigate(-1", "Move Up", False),
+        Binding("up,w,k", "navigate(-1)", "Move Up", False),
         Binding("down,s,j", "navigate(1)", "Move Down", False),
         # Binding("space", "move", "Toggle", False),
     ]
+
+    def __init__(self, name: str | None = None, id: str | None = None, classes: str | None = None) -> None:
+        super().__init__(name, id, classes)
+        self._repository = InMemoryRepository()
 
     def cell(self, row: int) -> GameCell:
         """Get the cell at a given location.
@@ -184,22 +196,37 @@ class Game(Screen):
             ComposeResult: The result of composing the game screen.
         """
         # yield GameHeader()
-        self._repository = InMemoryRepository()
-        yield GameGrid(self._repository)
+        game_grid = GameGrid(self._repository)
+        game_grid.focus()
+        self._game_grid = game_grid
+        yield game_grid
         yield Footer()
 
-    def on_button_pressed(self, event: GameCell.Pressed) -> None:
-        """React to a press of a button on the game grid.
+    def add(self) -> None:
+        a = 8 // 0
+        print(a)
+        self._repository.append(Register("Added", "Added"))
+        self._game_grid.compose()
+        self._game_grid.notify_style_update()
+        self.compose()
 
-        Args:
-            event (GameCell.Pressed): The event to react to.
-        """
-        # self.make_move_on(cast(GameCell, event.button))
+    # def on_button_pressed(self, event: GameCell.Pressed) -> None:
+    #     """React to a press of a button on the game grid.
+    #
+    #     Args:
+    #         event (GameCell.Pressed): The event to react to.
+    #     """
+    #     # self.make_move_on(cast(GameCell, event.button))
 
     def action_new_game(self) -> None:
         """Start a new game."""
+        self._repository = InMemoryRepository()
         # start_point = self.cell(0)
         # self.set_focus(start_point)
+
+    def navigate(self, x: int) -> None:
+        print(f"x: {x}")
+        sys.exit(1)
 
     def action_navigate(self, row: int) -> None:
         """Navigate to a new cell by the given offsets.
@@ -221,7 +248,6 @@ class Game(Screen):
 
     def on_mount(self) -> None:
         """Get the game started when we first mount."""
-        self.action_new_game()
 
 
 class FiveByFive(App[None]):

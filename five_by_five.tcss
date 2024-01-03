@@ -6,11 +6,6 @@ Game {
     layers: gameplay messages;
 }
 
-GameGrid {
-    layout: grid;
-    layer: gameplay;
-}
-
 GameHeader {
     background: $primary-background;
     color: $text;
